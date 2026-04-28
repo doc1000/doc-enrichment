@@ -1,5 +1,6 @@
 __version__ = "0.1.0"
 
+from doc_enrichment.enrichers.document import enrich_documents
 from doc_enrichment.schemas import (
     KnowledgePayload,
     SiblingContrast,
@@ -16,6 +17,8 @@ from doc_enrichment.errors import DocEnrichmentError, PromptLoadError, Enrichmen
 
 __all__ = [
     "__version__",
+    # enrichment functions
+    "enrich_documents",
     # payload models
     "KnowledgePayload",
     "SiblingContrast",
