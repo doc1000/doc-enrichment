@@ -1,7 +1,9 @@
 __version__ = "0.1.0"
 
+from doc_enrichment.enrichers.contrast import enrich_contrast
 from doc_enrichment.enrichers.document import enrich_documents
 from doc_enrichment.enrichers.parent import enrich_parent_nodes
+from doc_enrichment.normalization import NodeEnrichmentData, normalize_node_enrichments
 from doc_enrichment.schemas import (
     KnowledgePayload,
     SiblingContrast,
@@ -21,6 +23,10 @@ __all__ = [
     # enrichment functions
     "enrich_documents",
     "enrich_parent_nodes",
+    "enrich_contrast",
+    # normalization
+    "normalize_node_enrichments",
+    "NodeEnrichmentData",
     # payload models
     "KnowledgePayload",
     "SiblingContrast",
