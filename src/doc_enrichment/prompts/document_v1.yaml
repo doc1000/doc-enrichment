@@ -1,0 +1,42 @@
+version: "v1"
+description: "Document knowledge-base extraction and multi-chunk reduction"
+
+extract:
+  input_variables: [document_id, source, title, document_text]
+  template: |
+    You are creating a structured knowledge-base payload for a document.
+
+    Return a JSON object matching the schema exactly.
+
+    Document metadata:
+    - document_id: {document_id}
+    - source: {source}
+    - title: {title}
+
+    Instructions:
+    - Extract the most important knowledge from the document.
+    - Be concise but complete.
+    - Normalize duplicate ideas.
+    - Prefer concrete facts over vague themes.
+    - "document_type" describes format, not subject
+    - "intent_purpose" describes author intent, not subject (convince, educate, imperitive, advertise)
+    - "industry" describes something like a GICS industry group or industry
+    - "life_domain" describes where a person would apply this: career, relationships, home, healthcare, vacation, finances, worship, education, politics, legal
+
+    Document text:
+    {document_text}
+
+reduce:
+  input_variables: [document_id, source, title, chunk_payloads]
+  template: |
+    You are consolidating chunk-level knowledge-base payloads into one final payload.
+
+    Return a JSON object matching the schema exactly.
+
+    Document metadata:
+    - document_id: {document_id}
+    - source: {source}
+    - title: {title}
+
+    Chunk payloads:
+    {chunk_payloads}

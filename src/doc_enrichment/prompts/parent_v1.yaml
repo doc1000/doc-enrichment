@@ -1,0 +1,22 @@
+version: "v1"
+description: "Parent branch KnowledgePayload creation from two child payloads"
+input_variables: [branch_id, left_node_id, right_node_id, left_payload, right_payload]
+template: |
+  Create a combined knowledge payload for a parent branch from two child payloads.
+
+  Return JSON matching the schema exactly.
+
+  Parent branch_id: {branch_id}
+  Left child node_id: {left_node_id}
+  Right child node_id: {right_node_id}
+
+  Left payload:
+  {left_payload}
+
+  Right payload:
+  {right_payload}
+
+  Instructions:
+  - Merge and synthesize, do not just concatenate.
+  - Preserve the most important facts, entities, topics, audience, intent, and life-domain signals.
+  - Add provenance entries referencing both child node IDs.

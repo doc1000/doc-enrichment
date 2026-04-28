@@ -1,0 +1,81 @@
+version: "v1"
+description: >
+  Full branch enrichment: sibling contrast labels, parent KnowledgePayload,
+  and per-child parent-refinement labels. Produces BranchEnrichment output.
+input_variables: [payload_a, payload_b]
+template: |
+  You are analyzing two sibling nodes in a hierarchical knowledge tree.
+
+  Each sibling node has a JSON knowledge payload with:
+  title, summary, key_topics, entities, facts, intent_purpose, target_audience,
+  document_type, industry, life_domain, provenance.
+
+  Task:
+
+  1) Sibling contrast
+  - For each sibling, generate 3 human-interpretable labels that highlight how it
+    differs from its sibling.
+  - Generate 3 short tags (3-4 words) per sibling that quickly distinguish it
+    from its sibling.
+  - Focus on differences, not similarities.
+
+  2) Parent payload
+  - Create a combined parent KnowledgePayload that summarizes and unifies both
+    siblings.
+  - Preserve the same fields and structure as the child payloads.
+  - Summary and labels should reflect the shared content and broad themes.
+  - Keep generated title concise. Do not include terms like "Comprehensive knowledge of",
+    "Integrated overview of..". Just include topics.
+
+  3) Parent refinements
+  - For each child, generate 3 refinement labels that differentiate the child
+    from the parent (more specific versions of parent-level ideas).
+    Example:
+      parent: "customer support"
+      child:  "refund disputes"
+  - Generate 3 short refinement tags (3-4 words) per child that capture what is
+    unique to the child compared to the parent.
+
+  Return a single JSON object that matches this structure exactly:
+
+  {{
+    "sibling_a": {{
+      "contrast": ["...", "...", "..."],
+      "contrast_tag": ["...", "...", "..."]
+    }},
+    "sibling_b": {{
+      "contrast": ["...", "...", "..."],
+      "contrast_tag": ["...", "...", "..."]
+    }},
+    "parent_payload": {{
+      "title": ...,
+      "summary": ...,
+      "key_topics": [...],
+      "entities": [...],
+      "facts": [...],
+      "intent_purpose": [...],
+      "target_audience": [...],
+      "document_type": [...],
+      "industry": [...],
+      "life_domain": [...],
+      "provenance": [...]
+    }},
+    "parent_refinement_for_a": {{
+      "parent_refine": ["...", "...", "..."],
+      "parent_refine_tag": ["...", "...", "..."]
+    }},
+    "parent_refinement_for_b": {{
+      "parent_refine": ["...", "...", "..."],
+      "parent_refine_tag": ["...", "...", "..."]
+    }}
+  }}
+
+  Use double quotes and valid JSON only. No markdown, no comments, no extra text.
+
+  Sibling A payload:
+  {payload_a}
+
+  Sibling B payload:
+  {payload_b}
+
+  response:
