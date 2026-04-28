@@ -1,6 +1,7 @@
 __version__ = "0.1.0"
 
 from doc_enrichment.enrichers.document import enrich_documents
+from doc_enrichment.enrichers.parent import enrich_parent_nodes
 from doc_enrichment.schemas import (
     KnowledgePayload,
     SiblingContrast,
@@ -19,6 +20,7 @@ __all__ = [
     "__version__",
     # enrichment functions
     "enrich_documents",
+    "enrich_parent_nodes",
     # payload models
     "KnowledgePayload",
     "SiblingContrast",
