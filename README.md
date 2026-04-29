@@ -147,6 +147,40 @@ responses = asyncio.run(enrich_documents(requests, config=config))
 
 ---
 
+## Building requests from dicts
+
+```python
+from doc_enrichment import (
+    document_requests_from_dicts,
+    parent_requests_from_dicts,
+    contrast_requests_from_dicts,
+)
+
+# Document enrichment — default keys match: id, text, title, source
+docs = [{"id": "d1", "text": "...", "title": "My Doc", "source": "https://..."}]
+doc_requests = document_requests_from_dicts(docs)
+
+# Non-standard column names
+doc_requests = document_requests_from_dicts(
+    docs, doc_id_key="document_id", text_key="full_text", source_key="url"
+)
+
+# Parent / contrast enrichment — each record must include pre-built KnowledgePayload dicts
+branches = [
+    {
+        "branch_id": "b1",
+        "left_node_id": "d1",
+        "right_node_id": "d2",
+        "left_payload": left_resp.payload.model_dump(),
+        "right_payload": right_resp.payload.model_dump(),
+    }
+]
+parent_requests  = parent_requests_from_dicts(branches)
+contrast_requests = contrast_requests_from_dicts(branches)
+```
+
+---
+
 ## Service usage
 
 The optional FastAPI wrapper exposes the three enrichment functions as HTTP endpoints.
