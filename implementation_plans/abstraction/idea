@@ -1,0 +1,552 @@
+Me:
+I think that i am ok with a hybrid boilerplate/llm structure.  it looked like there was a lot of repetitive code in the existing structure, spread over multiple files.  Abstraction seems logical.   I would potentially keep the existing boilerplate, but then also convert one into config driven to see what it looked like.  I would like to keep most of my enrichment code in this repo - available for multiple projects.  so if I want to do non LLM NER or keyword/phrase, it will have a place to live and I can call it.  
+
+I think for now the schema shape will be similar.  Its a pretty common approach and I am trying to use a "markov" approach where the current input contract fully defines the output.
+
+i would prefer not to have to write small python file per enrichment.  if I HAVE to because the process is diff enough, I will.  but ideally I can version and adjust this fairly dynamically.
+
+I expect this to follow a simple base + instructions prompt pattern.  That might define this particular tool.  I can repass results back into instances for multi-step processes and keep other logic outside.
+
+chatGPT:
+This is a solid direction—and your instincts are right. You can get **80–90% of the benefit of abstraction** without turning this into a framework.
+
+You want:
+
+* minimal repetition
+* dynamic-ish behavior
+* no file-per-enricher if possible
+* still readable and debuggable
+
+That points to a **config-driven registry + one generic enricher**.
+
+---
+
+## ✅ Recommended pattern (fits your goals)
+
+### 1. Define enrichments as configs (not classes)
+
+```python
+ENRICHMENT_REGISTRY = {
+    "document": EnricherConfig(
+        mode="extract",
+        request_model=DocumentRequest,
+        response_model=DocumentResponse,
+        prompt_name="document_v1",
+        instructions="...",
+    ),
+    "parent": EnricherConfig(
+        mode="reduce",
+        request_model=ParentRequest,
+        response_model=ParentResponse,
+        prompt_name="parent_v1",
+        instructions="...",
+    ),
+    "contrast": EnricherConfig(
+        mode="extract",
+        request_model=ContrastRequest,
+        response_model=ContrastResponse,
+        prompt_name="contrast_v1",
+        instructions="...",
+    ),
+}
+```
+
+Now adding a new enrichment = **1 config entry**, not a new file.
+
+---
+
+## 2. One generic enricher
+
+```python
+class Enricher:
+    def __init__(self, config, runtime_config):
+        self.config = config
+        self.runtime_config = runtime_config
+        self.chain = self._build_chain()
+
+    def _build_chain(self):
+        return build_chain(
+            prompt_name=self.config.prompt_name,
+            instructions=self.config.instructions,
+            model=self.runtime_config.model,
+            response_model=self.config.response_model,
+        )
+
+    async def run(self, requests):
+        return await self.chain.abatch(requests)
+```
+
+---
+
+## 3. Public API (what you actually call)
+
+```python
+async def run_enrichment(name, records, config):
+    enricher_config = ENRICHMENT_REGISTRY[name]
+    
+    requests = format_records(records, enricher_config.request_model)
+
+    enricher = Enricher(enricher_config, config)
+    return await enricher.run(requests)
+```
+
+Now your main usage becomes:
+
+```python
+await run_enrichment("document", df, config)
+await run_enrichment("parent", pairs, config)
+```
+
+---
+
+## 4. Where “formatters” go (cleanly)
+
+Instead of separate modules per type:
+
+```python
+def format_records(records, request_model):
+    return [request_model(**r) for r in records]
+```
+
+Only specialize if needed:
+
+```python
+FORMATTERS = {
+    "parent": format_parent_pairs,
+}
+```
+
+So:
+
+* default = generic
+* override only when necessary
+
+---
+
+## 5. Handling your “Markov contract” idea
+
+This fits very well.
+
+Your system becomes:
+
+```text
+request_model → defines → prompt → defines → response_model
+```
+
+So config is effectively:
+
+```python
+EnricherConfig(
+    request_model=...,
+    response_model=...,
+    prompt_name=...,
+)
+```
+
+That’s clean and powerful without being abstract-for-its-own-sake.
+
+---
+
+## 6. Where non-LLM enrichments fit
+
+Same interface:
+
+```python
+ENRICHMENT_REGISTRY["ner"] = EnricherConfig(
+    mode="extract",
+    request_model=...,
+    response_model=...,
+    runner=spacy_ner_runner,   # override LLM
+)
+```
+
+Then:
+
+```python
+if config.runner:
+    return config.runner(requests)
+else:
+    return self.chain.abatch(requests)
+```
+
+Now you have:
+
+* LLM enrichments
+* non-LLM enrichments
+  in the same system
+
+---
+
+## ⚠️ What to avoid (you’re close to overdoing it)
+
+Don’t:
+
+* dynamically generate schemas
+* build a plugin system
+* try to fully unify extract/reduce/tournament in config
+* eliminate all Python touchpoints
+
+You *want*:
+
+> config-driven, but not config-only
+
+---
+
+## 🔑 Key design principle
+
+> “Default generic path, override only when necessary”
+
+So:
+
+* 80% → registry + generic enricher
+* 20% → small override functions
+
+---
+
+## 🚀 What I’d do next (concrete)
+
+1. Keep your current working `document` enricher
+2. Rebuild it using this config-driven approach
+3. Compare:
+
+   * lines of code
+   * clarity
+   * flexibility
+
+If it feels better → migrate others
+If not → keep hybrid
+
+---
+
+## Bottom line
+
+* ✅ Your idea is **very plausible**
+* ✅ Registry + generic enricher is the right level
+* ✅ You can avoid file-per-enricher
+* ❌ Don’t try to remove Python entirely from the system
+
+---
+
+If you want, I can sketch exactly how your current code maps into this pattern (line-by-line mental model) so migration is trivial.
+
+
+
+me:
+yes.  please sketch out the process.  I like what I see so far.  I would want to understand where we keep new contract definitions - the registry?  The whole point is to be able to adapt to new knowledge base structures - for instance, say I want to extract numerical information from a balance sheet converted to csv... its a totally different request and response contract.  let's see what migration you have in mind.
+from ChatGPT
+
+Yes. I would migrate toward this shape:
+
+```text
+src/doc_enrichment/
+  schemas.py                  # shared/base contracts
+  contracts/
+    __init__.py
+    topic_payload.py
+    balance_sheet.py
+    contrast.py
+  registry.py                 # enrichment definitions
+  enricher.py                 # generic runner
+  prompt_loader.py
+  chains.py
+  formatting.py
+  pipeline.py
+```
+
+## Key idea
+
+Keep **contract definitions in Python**, not the registry.
+
+The registry should reference contracts, not define them.
+
+Why? Because Pydantic models are real code. They need type checking, tests, imports, validation, docs, and IDE support.
+
+So:
+
+```python
+# contracts/balance_sheet.py
+
+from pydantic import BaseModel
+
+
+class BalanceSheetRequest(BaseModel):
+    doc_id: str
+    table_text: str
+    period_hint: str | None = None
+
+
+class BalanceSheetPayload(BaseModel):
+    reporting_period: str | None
+    currency: str | None
+    total_assets: float | None
+    total_liabilities: float | None
+    total_equity: float | None
+    cash: float | None
+    debt: float | None
+    notes: list[str]
+
+
+class BalanceSheetResponse(BaseModel):
+    doc_id: str
+    enrichment_type: str = "balance_sheet_financials"
+    schema_version: str
+    prompt_version: str
+    model_name: str
+    payload: BalanceSheetPayload
+```
+
+Then registry wires it up:
+
+```python
+# registry.py
+
+from doc_enrichment.contracts.topic_payload import (
+    DocumentPayloadRequest,
+    DocumentPayloadResponse,
+)
+
+from doc_enrichment.contracts.balance_sheet import (
+    BalanceSheetRequest,
+    BalanceSheetResponse,
+)
+
+
+ENRICHMENTS = {
+    "document_topic_payload": {
+        "mode": "extract",
+        "request_model": DocumentPayloadRequest,
+        "response_model": DocumentPayloadResponse,
+        "prompt_version": "document_v1",
+        "schema_version": "topic_payload_v1",
+    },
+    "balance_sheet_financials": {
+        "mode": "extract",
+        "request_model": BalanceSheetRequest,
+        "response_model": BalanceSheetResponse,
+        "prompt_version": "balance_sheet_v1",
+        "schema_version": "balance_sheet_v1",
+    },
+}
+```
+
+## Generic runner
+
+```python
+async def run_enrichment(name: str, records, runtime_config):
+    spec = ENRICHMENTS[name]
+
+    request_model = spec["request_model"]
+    response_model = spec["response_model"]
+
+    requests = [request_model.model_validate(r) for r in records]
+
+    chain = build_structured_chain(
+        prompt_version=spec["prompt_version"],
+        response_model=response_model,
+        runtime_config=runtime_config,
+    )
+
+    return await chain.abatch(requests)
+```
+
+That gives you:
+
+```python
+results = await run_enrichment(
+    "balance_sheet_financials",
+    balance_sheet_records,
+    config,
+)
+```
+
+## Migration path
+
+### Step 1: Keep existing working enrichers
+
+Do not delete them yet.
+
+```text
+document.py
+parent.py
+contrast.py
+```
+
+Leave them working.
+
+### Step 2: Extract current contracts
+
+Move current Pydantic models into:
+
+```text
+contracts/topic_payload.py
+contracts/parent_payload.py
+contracts/contrast.py
+```
+
+### Step 3: Create registry entry for document enrichment
+
+Start with one:
+
+```python
+"document_topic_payload"
+```
+
+Make the generic path reproduce existing `enrich_documents`.
+
+### Step 4: Add adapter wrapper
+
+Keep old API:
+
+```python
+async def enrich_documents_from_records(records, config):
+    return await run_enrichment("document_topic_payload", records, config)
+```
+
+So external callers do not care.
+
+### Step 5: Convert parent
+
+Parent may need a custom formatter because it takes pairs.
+
+Registry can allow optional formatter:
+
+```python
+"parent_topic_payload": {
+    "mode": "reduce",
+    "request_model": ParentPayloadRequest,
+    "response_model": ParentPayloadResponse,
+    "prompt_version": "parent_v1",
+    "formatter": format_parent_pairs,
+}
+```
+
+Generic runner:
+
+```python
+formatter = spec.get("formatter", default_formatter)
+requests = formatter(records, spec["request_model"])
+```
+
+### Step 6: Add non-topic enrichment
+
+For balance sheet:
+
+```text
+contracts/balance_sheet.py
+prompts/balance_sheet_v1.yaml
+```
+
+Registry:
+
+```python
+"balance_sheet_financials": {
+    "mode": "extract",
+    "request_model": BalanceSheetRequest,
+    "response_model": BalanceSheetResponse,
+    "prompt_version": "balance_sheet_v1",
+    "schema_version": "balance_sheet_v1",
+}
+```
+
+No new runner needed.
+
+## Where prompts live
+
+```text
+prompts/
+  base_extract.yaml
+  base_reduce.yaml
+  document_v1.yaml
+  parent_v1.yaml
+  contrast_v1.yaml
+  balance_sheet_v1.yaml
+```
+
+Prompt composition:
+
+```text
+base_extract + specific instructions
+```
+
+So each specific prompt file can be mostly instructions:
+
+```yaml
+version: balance_sheet_v1
+mode: extract
+instructions: |
+  Extract numerical financial information from the provided balance sheet text.
+  Preserve units and currency where possible.
+  Use null when a field is not present.
+```
+
+## Where contracts live
+
+Contracts live in:
+
+```text
+contracts/
+```
+
+Not registry.
+
+Registry is the map:
+
+```text
+enrichment name → contract + prompt + mode + formatter/runner
+```
+
+## When you need custom Python
+
+Only if the enrichment has special logic:
+
+```python
+"non_llm_ner": {
+    "mode": "extract",
+    "request_model": NerRequest,
+    "response_model": NerResponse,
+    "runner": run_spacy_ner,
+}
+```
+
+Generic runner checks:
+
+```python
+if spec.runner:
+    return await spec.runner(requests, config)
+```
+
+## Public API
+
+Expose both ergonomic and generic:
+
+```python
+await run_enrichment("balance_sheet_financials", records, config)
+
+await enrich_documents_from_records(records, config)
+await enrich_parent_nodes_from_records(records, config)
+await enrich_contrast_from_records(records, config)
+```
+
+The generic one is for expansion. The named helpers are for common workflows.
+
+## Final mental model
+
+```text
+records/dataframe
+  ↓
+formatter
+  ↓
+request contract
+  ↓
+registry lookup
+  ↓
+prompt composition
+  ↓
+LangChain structured output
+  ↓
+response contract
+  ↓
+validated enrichment result
+```
+
+This gives you dynamic enrichment selection without making schemas flimsy or hiding important logic in config blobs.

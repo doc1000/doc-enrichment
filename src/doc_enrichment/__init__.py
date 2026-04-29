@@ -1,6 +1,11 @@
 __version__ = "0.1.0"
 
 from doc_enrichment.enrichers.contrast import enrich_contrast
+from doc_enrichment.io import (
+    contrast_requests_from_dicts,
+    document_requests_from_dicts,
+    parent_requests_from_dicts,
+)
 from doc_enrichment.enrichers.document import enrich_documents
 from doc_enrichment.enrichers.parent import enrich_parent_nodes
 from doc_enrichment.normalization import NodeEnrichmentData, normalize_node_enrichments
@@ -20,6 +25,10 @@ from doc_enrichment.errors import DocEnrichmentError, PromptLoadError, Enrichmen
 
 __all__ = [
     "__version__",
+    # request builders
+    "document_requests_from_dicts",
+    "parent_requests_from_dicts",
+    "contrast_requests_from_dicts",
     # enrichment functions
     "enrich_documents",
     "enrich_parent_nodes",
