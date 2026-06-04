@@ -538,7 +538,64 @@ print(final_output_state["enriched_payload"])
 
 {
   "taxonomy_enrichment": "You are an expert ontologist. Expand this raw category label into a rich lexical definition for a zero-shot classification model.\nRaw Category: {category_name}\nContext/Domain: {taxonomy_name}\n\nReturn a JSON object with this exact schema:\n{{\n  \"category\": \"{category_name}\",\n  \"synonyms\": [\"word1\", \"word2\"],\n  \"descriptors\": [\"phrase describing intent\", \"another phrase\"],\n  \"sub_categories\": [\"sub1\", \"sub2\"]\n}}"
+    ,"contrastive_differentiator": "You are a master ontologist specializing in training low-dimensional zero-shot text classifiers.\n\nYour task is to analyze the following group of categories and generate a distinct set of descriptors and keyword synonyms for each. \n\nCRITICAL CONSTRAINT: The terms generated for a category must be strictly EXCLUSIVE and act as DIFFERENTIATORS. A keyword or phrase assigned to one category must NOT appear or overlap with the words assigned to any other category in this group. Focus on isolating vocabulary boundaries.\n\nTarget Categories for this Ontology: {category_list}\n\nReturn a JSON object matching this schema exactly:\n{{\n  \"taxonomy_name\": \"{taxonomy_name}\",\n  \"categories\": [\n    {{\n      \"label\": \"example_category\",\n      \"synonyms\": [\"exclusive_synonym1\", \"exclusive_synonym2\"],\n      \"differentiators\": [\"unique phrase mapping this concept\", \"another unique phrase\"]\n    }}\n  ]\n}}"
+    ,"taxonomy_generator": "You are an expert ontologist. Generate a new taxonomy based on the following context and constraints:\n\nContext: {context}\nConstraints: {constraints}\n\nReturn a JSON object with this exact schema:\n{{\n  \"taxonomy_name\": \"{taxonomy_name}\",\n  \"categories\": [\n    {{\n      \"label\": \"example_category\",\n      \"synonyms\": [\"word1\", \"word2\"],\n      \"descriptors\": [\"phrase describing intent\", \"another phrase\"],\n      \"sub_categories\": [\"sub1\", \"sub2\"]\n    }}\n  ]\n}}"
 }
+
+# Making the LLM Step Model-AgnosticTo let you pass in any model framework (Ollama, Gemini, Llama.cpp, or OpenAI) on the fly, you can leverage LangChain's unified BaseChatModel abstraction. This keeps your pipeline entirely model-agnostic. You initialize the model component during setup and pass it straight into your graph execution state.Model Setup Configurations
+
+# Option A: Local execution via Ollama (Completely free, runs on your CPU/Mac)
+from langchain_community.chat_models import ChatOllama
+llm_worker = ChatOllama(model="llama3.1:8b", format="json", temperature=0.1)
+
+# Option B: Managed Cloud via Gemini (High reasoning, pay-per-token API)
+# from langchain_google_genai import ChatGoogleGenai
+# llm_worker = ChatGoogleGenai(model="gemini-1.5-pro", temperature=0.1)
+
+# Integrated Graph Node ImplementationHere is how to write the Contrastive LLM Enricher node to consume your model configuration, process your categories as a group, and safely ingest the structural JSON schema:
+
+import json
+from typing import Dict
+from langchain_core.messages import HumanMessage
+
+def contrastive_llm_enricher_node(state: AdminState, config: Dict) -> Dict:
+    """
+    Reads the externalized contrastive prompt, passes all categories at once 
+    to your configured model, and outputs exclusive semantic features.
+    """
+    # 1. Fetch your model wrapper passed via the LangGraph configuration runtime
+    # This keeps the node function itself generic and agnostic
+    llm = config.get("configurable", {}).get("llm_model")
+    if not llm:
+        raise ValueError("No LLM model component was provided in the graph configuration.")
+
+    # 2. Extract input taxonomy traits from graph state
+    taxonomy_name = state["taxonomy_name"]
+    raw_labels = [cat["label"] for cat in state["categories_input"]]
+    
+    # 3. Load your external contrastive prompt template
+    with open("config/prompts.json", "r") as f:
+        prompts = json.load(f)
+        
+    formatted_prompt = prompts["contrastive_differentiator"].format(
+        taxonomy_name=taxonomy_name,
+        category_list=", ".join(raw_labels)
+    )
+    
+    # 4. Invoke your model (Ollama, Gemini, etc. all share the exact same .invoke signature)
+    response = llm.invoke([HumanMessage(content=formatted_prompt)])
+    
+    # 5. Safely extract and parse the structural JSON content payload
+    try:
+        enriched_data = json.loads(response.content)
+    except json.JSONDecodeError:
+        # Fallback mechanism if a tiny local model slips up formatting boundaries
+        raise ValueError("Failed to parse contrastive LLM output. Model did not emit clean JSON.")
+        
+    print(f"✅ Successfully extracted distinct differentiators for {len(raw_labels)} classes.")
+    
+    return {"validated_taxonomy": {"name": taxonomy_name, "categories": enriched_data["categories"]}}
+
 
 
 # Implementation of the Administration WorkflowHere is how you write this stateful workflow using LangGraph components:
@@ -697,3 +754,18 @@ admin_flow.add_edge("process_labelled", END)
 admin_flow.add_edge("process_unlabelled_teacher", END)
 
 admin_app = admin_flow.compile()
+
+
+# Running Your Setup CallWhen invoking the compiled graph, pass your chosen model class inside the secondary configuration object. The state remains clean, and switching models requires updating only a single configuration line.
+
+# Pack your agnostic runtime parameters
+config_params = {"configurable": {"llm_model": llm_worker}}
+
+initial_admin_state = {
+    "taxonomy_name": "it_governance_v1",
+    "categories_input": [{"label": "software_licensing"}, {"label": "hardware_procurement"}, {"label": "cloud_finops"}],
+    "force_llm_enrichment": True
+}
+
+# Run the pipeline with tracking flowing smoothly to LangSmith
+final_admin_state = admin_app.invoke(initial_admin_state, config=config_params)
