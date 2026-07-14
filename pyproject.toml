@@ -26,6 +26,23 @@ service = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.29",
 ]
+transformer-cat = [
+    "torch>=2.2",
+    "transformers>=4.40",
+    "datasets>=2.19",
+    "scikit-learn>=1.4",
+    "numpy>=1.26",
+    "joblib>=1.4",
+    "langgraph>=0.2",
+    "langchain-community>=0.3",
+    "nltk>=3.8",
+    "pandas>=2.2",
+    "matplotlib>=3.8",
+    "notebook>=7.0",
+    "jupyterlab>=4.0",
+    "ipykernel>=6.29",
+    "nbconvert>=7.16",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
