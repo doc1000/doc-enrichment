@@ -1,0 +1,55 @@
+{
+    "news_topics_v1": {
+      "taxonomy_name": "news_topics_v1",
+      "description": "Standard editorial classification for general news reporting streams.",
+      "categories": [
+        {
+          "label": "business_finance",
+          "synonyms": ["corporate", "fiscal", "macroeconomics", "equities", "capitalism"],
+          "differentiators": ["quarterly earnings guidance", "mergers and acquisitions transaction", "central bank interest rate hike", "stock exchange index trading", "revenue yield margin profit profitability"]
+        },
+        {
+          "label": "science_environment",
+          "synonyms": ["ecology", "laboratory", "meteorology", "biosphere", "empirical"],
+          "differentiators": ["climate change carbon emissions global warming", "peer reviewed journal publication discovery", "ecosystem biodiversity wildlife conservation endangered species", "genetic sequencing molecular cellular organism", "experimental research data hypothesis study"]
+        },
+        {
+          "label": "sports_athletics",
+          "synonyms": ["tournament", "championship", "playoffs", "stadium", "scoreboard"],
+          "differentiators": ["athletic competition match game fixture league", "player roster trade contract injury report", "coach tactical strategy training session", "medal podium trophy victory defeat score", "olympics league standings draft pick"]
+        },
+        {
+          "label": "technology_innovation",
+          "synonyms": ["digital", "automation", "hardware", "software", "infrastructure"],
+          "differentiators": ["artificial intelligence neural network algorithm generative", "cybersecurity breach encryption vulnerability firewall patch", "semiconductor chip architecture manufacturing process", "cloud computing database application deployment architecture", "telecommunications bandwidth infrastructure network protocol"]
+        }
+      ]
+    },
+    "document_purpose_v1": {
+      "taxonomy_name": "document_purpose_v1",
+      "description": "Functional intent categorization tracking the hidden motive of a text.",
+      "categories": [
+        {
+          "label": "informational",
+          "synonyms": ["educational", "expository", "objective", "factual", "reference"],
+          "differentiators": ["neutral documentation report summary overview chronicling", "statistical data analysis archive reference material encyclopedia", "unbiased recording chronological historical cataloging listing", "definitions explanations terminology criteria parameters", "impartial reporting balance transparency source attribution"]
+        },
+        {
+          "label": "imperative",
+          "synonyms": ["directive", "mandatory", "procedural", "authoritative", "regulatory"],
+          "differentiators": ["step by step instructions user manual protocol", "compliance requirements checklist mandatory directives compliance", "standard operating procedures guidelines workflows walkthrough", "legal statutes enforcement penalties obligations clauses", "command prompt call to action execution phase checklist"]
+        },
+        {
+          "label": "commercial_selling",
+          "synonyms": ["promotional", "marketing", "transactional", "advertising", "persuasive"],
+          "differentiators": ["limited time offer discount voucher checkout cart", "product pricing tiers subscription plans pricing packages", "customer testimonials value proposition unique selling points", "add to cart upgrade plan monetize conversion rate", "sponsored campaign product demonstration endorsement feature benefit"]
+        },
+        {
+          "label": "philosophical_enlightening",
+          "synonyms": ["existential", "theoretical", "abstract", "contemplative", "intellectual"],
+          "differentiators": ["metaphysical examination ethics morality human condition", "conceptual framework paradigm shift ideological inquiry", "thought experiment paradox epistemological discourse critique", "abstract reasoning introspection wisdom meditation tenets", "existential dilemmas core values long-form commentary reflection"]
+        }
+      ]
+    }
+  }
+  

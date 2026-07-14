@@ -1,0 +1,16 @@
+torch>=2.2
+transformers>=4.40
+datasets>=2.19
+scikit-learn>=1.4
+numpy>=1.26
+joblib>=1.4
+langgraph>=0.2
+langchain-core>=0.3
+langchain-text-splitters>=0.3
+langchain-community>=0.3
+nltk>=3.8
+pandas>=2.2
+matplotlib>=3.8
+notebook>=7.0
+pytest>=8.0
+python-dotenv>=1.0

@@ -1,0 +1,22 @@
+{
+    "news_topics_v1": {
+        "model_file": "C:\\Users\\doste\\projects\\vbub\\doc-enrichment\\implementation_plans\\transformer_cat\\models\\news_topics_v1_student.joblib",
+        "categories": [
+            "business_finance",
+            "science_environment",
+            "sports_athletics",
+            "technology_innovation"
+        ],
+        "features_dim": 768
+    },
+    "document_purpose_v1": {
+        "model_file": "C:\\Users\\doste\\projects\\vbub\\doc-enrichment\\implementation_plans\\transformer_cat\\models\\document_purpose_v1_student.joblib",
+        "categories": [
+            "commercial_selling",
+            "imperative",
+            "informational",
+            "philosophical_enlightening"
+        ],
+        "features_dim": 768
+    }
+}

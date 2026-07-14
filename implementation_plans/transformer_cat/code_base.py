@@ -769,3 +769,76 @@ initial_admin_state = {
 
 # Run the pipeline with tracking flowing smoothly to LangSmith
 final_admin_state = admin_app.invoke(initial_admin_state, config=config_params)
+
+
+
+
+# How to Seed and Initialize This in Your Graph PipelineYou can save this JSON to disk and load it into your Python environment. This code loops over the file, converts each item to your graph's AdminState input format, and builds the initial student models using your local anchor corpus.
+
+import json
+import numpy as np
+
+# 1. Load your newly created initial taxonomy file
+with open("config/initial_taxonomies.json", "r") as f:
+    taxonomies_data = json.load(f)
+
+# 2. Iterate through each ontology and inject it into your LangGraph workspace
+for taxonomy_key, taxonomy_body in taxonomies_data.items():
+    print(f"🚀 Initializing model bootstrap loop for: {taxonomy_key}")
+    
+    # Format the payload for your AdminState schema
+    initial_state = {
+        "taxonomy_name": taxonomy_body["taxonomy_name"],
+        "categories_input": taxonomy_body["categories"],
+        "force_llm_enrichment": False, # Skip LLM step since they are already enriched
+        "provided_labelled_corpus": None,
+        "provided_unlabelled_corpus": None
+    }
+    
+    # 3. Invoke your Admin Graph
+    # This runs the ModernBERT zero-shot teacher loop on anchor text,
+    # extracts the pooled X_features, maps predictions, trains the 
+    # LogisticRegression student, and registers it to your registry!
+    output_state = admin_app.invoke(initial_state)
+    
+    print(f"✅ Taxonomy '{taxonomy_key}' successfully calibrated and registered.\n")
+
+
+# he Implementation Code (To include in your src/ utilities)Add this deterministic data loader to your project structure. It ensures the anchor corpus is pulled once, stored safely as a local JSON file inside transformer_cat/data/, and sliced instantly according to your testing or production needs.
+
+import os
+import json
+from datasets import load_dataset
+
+def get_anchor_corpus(sample_size: int = None, cache_dir: str = "transformer_cat/data") -> list:
+    """
+    Retrieves the anchor corpus from a local JSON cache. If the cache doesn't
+    exist, it pulls 2,000 records from Hugging Face once, saves them locally, 
+    and never hits the network again.
+    
+    Args:
+        sample_size: If integer provided (e.g., 30 for TDD), returns a fast slice.
+                     If None, returns the full 2,000 document pool for production.
+    """
+    os.makedirs(cache_dir, exist_ok=True)
+    cache_path = os.path.join(cache_dir, "anchor_corpus_cache.json")
+    
+    # 1. Check if we already have the local file
+    if os.path.exists(cache_path):
+        with open(cache_path, "r", encoding="utf-8") as f:
+            corpus = json.load(f)
+    else:
+        print("📥 Local anchor cache missing. Downloading 2,000 reference docs (one-time operation)...")
+        # Pull down a fixed slice from Hugging Face
+        dataset = load_dataset("ag_news", split="train[:2000]")
+        corpus = dataset["text"]
+        
+        # Save to your strictly bounded folder
+        with open(cache_path, "w", encoding="utf-8") as f:
+            json.dump(corpus, f, ensure_ascii=False, indent=2)
+            
+    # 2. Return a deterministic slice based on the environment call
+    if sample_size:
+        return corpus[:sample_size]
+    
+    return corpus
